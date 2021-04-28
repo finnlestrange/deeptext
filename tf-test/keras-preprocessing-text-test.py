@@ -1,3 +1,5 @@
+# Keras Text PreProcessing Test
+
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras.preprocessing.text import Tokenizer
@@ -8,7 +10,9 @@ embedding_dim = 32
 max_length = 16
 trunc_type = 'post'
 padding_type = 'post'
-oov_tok = "<OOV>"
+# https://www.kaggle.com/hamishdickson/using-keras-oov-tokens - OOV token necessary for filtering out rare words and
+# misspellings and variations of other words
+#oov_tok = "<OOV>"
 training_size = 20000
 
 sentences = [
@@ -17,7 +21,7 @@ sentences = [
     "This is another test sentence"
 ]
 
-tokenizer = Tokenizer(num_words = vocab_size, oov_token=oov_tok)
+tokenizer = Tokenizer(num_words=vocab_size)
 
 tokenizer.fit_on_texts(sentences)
 
@@ -26,9 +30,6 @@ word_index = tokenizer.word_index
 sequences = tokenizer.texts_to_sequences(sentences)
 
 padded = pad_sequences(sequences, padding=padding_type, truncating=trunc_type, maxlen=5)
-
-label_tokenizer = Tokenizer()
-
 
 print(word_index)
 print(sequences)
