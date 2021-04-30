@@ -1,15 +1,13 @@
 # Importing tf and required libraries
 # Literally the messiest and shittiest import ever but who the fuck cares
 import tensorflow as tf
+# from tensorflow import keras
 from tensorflow.keras.layers.experimental import preprocessing
-import numpy as np
-import os
-from tensorflow import keras
 from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 import os
 import time
-
+import numpy as np
 
 # Fuck it no imports, pasting functions in here instead
 # Function pastes:
