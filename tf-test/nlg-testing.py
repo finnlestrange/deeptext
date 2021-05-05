@@ -1,5 +1,5 @@
 # Importing tf and required libraries
-# Literally the messiest and shittiest import ever but who the fuck cares
+# Literally the messiest and worst import ever but who cares
 import tensorflow as tf
 # from tensorflow import keras
 from tensorflow.keras.layers.experimental import preprocessing
@@ -8,8 +8,9 @@ from tensorflow.keras.preprocessing.sequence import pad_sequences
 import os
 import time
 import numpy as np
+import sys
 
-# Fuck it no imports, pasting functions in here instead
+# oh well no imports, pasting functions in here instead
 # Function pastes:
 # Conversion into functional form
 def load_data(location):
@@ -40,7 +41,7 @@ def vectorize(sentences):
     return padded, word_index
 
 
-locations = "C:\\Users\\nicol\\PycharmProjects\\deep-text\\tf-test\\data\\pos"
+locations = str(sys.argv[1])
 
 # Dataset imported - IMDB reviews data
 """
