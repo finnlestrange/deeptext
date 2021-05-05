@@ -1,5 +1,5 @@
 # Importing tf and required libraries
-# Literally the messiest and shittiest import ever but who the fuck cares
+# Literally the messiest and worst import ever but who cares
 import tensorflow as tf
 # from tensorflow import keras
 from tensorflow.keras.layers.experimental import preprocessing
@@ -9,7 +9,7 @@ import os
 import time
 import numpy as np
 
-# Fuck it no imports, pasting functions in here instead
+# oh well no imports, pasting functions in here instead
 # Function pastes:
 # Conversion into functional form
 def load_data(location):
