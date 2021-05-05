@@ -8,6 +8,7 @@ from tensorflow.keras.preprocessing.sequence import pad_sequences
 import os
 import time
 import numpy as np
+import sys
 
 # oh well no imports, pasting functions in here instead
 # Function pastes:
@@ -40,7 +41,7 @@ def vectorize(sentences):
     return padded, word_index
 
 
-locations = "C:\\Users\\nicol\\PycharmProjects\\deep-text\\tf-test\\data\\pos"
+locations = str(sys.argv[1])
 
 # Dataset imported - IMDB reviews data
 """
