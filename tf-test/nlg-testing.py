@@ -10,6 +10,7 @@ import time
 import numpy as np
 import sys
 
+
 # oh well no imports, pasting functions in here instead
 # Function pastes:
 # Conversion into functional form
@@ -27,6 +28,7 @@ def load_data(location):
 
 
 # Tokenization and conversion into vector matrices here
+"""
 def vectorize(sentences):
     tokenizer = Tokenizer(num_words=1000, oov_token="<OOV>")
 
@@ -39,7 +41,7 @@ def vectorize(sentences):
     padded = pad_sequences(sequences, padding='post', truncating='post', maxlen=5)
 
     return padded, word_index
-
+"""
 
 locations = str(sys.argv[1])
 
@@ -50,11 +52,22 @@ all_word_ids = list of all vectorized words
 words_in_text = Number of words in text
 """
 sentences = load_data(locations)
-all_word_ids, word_index = vectorize(sentences)
+sentence = sentences[0]
+# all_word_ids, word_index = vectorize(sentences)
+vocab = sorted(set(sentence))
+chars = tf.strings.unicode_split(sentence, input_encoding="UTF-8")
+ids_from_chars = preprocessing.StringLookup(
+    vocabulary=list(vocab)
+)
+chars_from_ids = preprocessing.StringLookup(vocabulary=ids_from_chars.get_vocabulary(), invert=True)
 words_in_text = 1000
 
 # Slicing up the word ids into datasets
-ids_dataset = tf.data.Dataset.from_tensor_slices(all_word_ids)
+all_ids = ids_from_chars(chars)
+# print(all_ids)
+ids_dataset = tf.data.Dataset.from_tensor_slices(all_ids)
+# for ids in ids_dataset.take(10):
+#    print(chars_from_ids(ids).numpy().decode("utf-8"))
 
 # Prediction
 """
@@ -62,15 +75,16 @@ Write blurb about prediction
 """
 
 # Setting sequence length to 15 - average sentence length - 228
-seq_length = 228
+seq_length = 100
 examples_per_epoch = words_in_text//(seq_length+1)
 
 # Converting list of words into desired sequence lengths
 sequences = ids_dataset.batch(seq_length+1, drop_remainder=True)
+# for seq in sequences.take(1):
+#     print(chars_from_ids(seq))
 
 
 # Splits dataset into input and target texts for training
-@tf.autograph.experimental.do_not_convert
 def split_input_target(sequence):
     input_text = sequence[:-1]
     target_text = sequence[1:]
@@ -85,17 +99,11 @@ dataset = sequences.map(split_input_target)
 Write blurb about training batches
 """
 
-# Batch size - explanation
-BATCH_SIZE = 64
-
-# Buffer size - stops memory leak
-BUFFER_SIZE = 10000
-
-dataset = (
-    dataset
-    .shuffle(BUFFER_SIZE)
-    .batch(BATCH_SIZE, drop_remainder=True)
-    .prefetch(tf.data.experimental.AUTOTUNE))
+# DO NOT USE VARIABLES FOR RESPRESNTING SHUFFLE BUFFER OR BATCH SIZE - BREAKS EVERYTHING
+# Dataset batching and shuffling and prefetching
+dataset = dataset.shuffle(10000)
+dataset = dataset.batch(64)
+dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
 
 # Building a training model
 """
@@ -104,7 +112,7 @@ Write blurb about training models
 
 # Initialize variables for model
 # Output layer size - equivalent to vocab size
-vocab_size = len(all_word_ids)
+vocab_size = len(vocab)
 
 # Embedding dimension - Input layer - maps vectors
 embedding_dim = 256
@@ -114,36 +122,38 @@ rnn_units = 1024
 
 
 # This is the model object - taken from tf web
-class testModel(tf.keras.Model):
-    def __init__(self, vocab_size, embedding_dim, rnn_units):
-        super().__init__(self)
-        self.embedding = tf.keras.layers.Embedding(vocab_size, embedding_dim)
-        self.gru = tf.keras.layers.GRU(rnn_units,
-                                       return_sequences=True,
-                                       return_state=True)
-        self.dense = tf.keras.layers.Dense(vocab_size)
+class MyModel(tf.keras.Model):
+  def __init__(self, vocab_size, embedding_dim, rnn_units):
+    super().__init__(self)
+    self.embedding = tf.keras.layers.Embedding(vocab_size, embedding_dim)
+    self.gru = tf.keras.layers.GRU(rnn_units,
+                                   return_sequences=True,
+                                   return_state=True)
+    self.dense = tf.keras.layers.Dense(vocab_size)
 
-    def call(self, inputs, states=None, return_state=False, training=False):
-        x = inputs
-        x = self.embedding(x, training=training)
-        if states is None:
-            states = self.gru.get_initial_state(x)
-        x, states = self.gru(x, initial_states=states, training=training)
-        x = self.dense(x, training=training)
+  def call(self, inputs, states=None, return_state=False, training=False):
+    x = inputs
+    x = self.embedding(x, training=training)
+    if states is None:
+      states = self.gru.get_initial_state(x)
+    x, states = self.gru(x, initial_state=states, training=training)
+    x = self.dense(x, training=training)
 
-        if return_state:
-            return x, states
-        else:
-            return x
+    if return_state:
+      return x, states
+    else:
+      return x
+
 
 # Model object created - saved to var model
-model = testModel(
-    vocab_size=vocab_size,
+model = MyModel(
+    vocab_size=len(ids_from_chars.get_vocabulary()),
     embedding_dim=embedding_dim,
-    rnn_units=rnn_units
-)
+    rnn_units=rnn_units)
 
-# Model testing
+# Model testing ACTUALLY WORKS OH MY GOD FINALLY
 for input_example_batch, target_example_batch in dataset.take(1):
     example_batch_predictions = model(input_example_batch)
     print(example_batch_predictions.shape, "# (batch_size, sequence_length, vocab_size)")
+
+model.summary()
