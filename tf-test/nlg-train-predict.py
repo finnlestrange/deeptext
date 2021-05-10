@@ -1,5 +1,6 @@
 # This file combines training and predicting into one broad file - trains and then outputs data - inefficient
 # Fix imports at some point
+# Current setup is for the mark 2 variation of the program - 500 sentences, 30 epochs - Est. train time = 5 hours
 import tensorflow as tf
 # from tensorflow import keras
 from tensorflow.keras.layers.experimental import preprocessing
@@ -64,8 +65,8 @@ words_in_text = Number of words in text
 sentences = load_data(locations)
 # Convert sentences into a single string but with each line being a different review
 sentence = ""
-# Full dataset is 2519*5 sentences, original training will be on only 50 cuz all of them is way too much
-for a in range(50):
+# Full dataset is 2519*5 reviews, original training will be on only 50 cuz all of them is way too much
+for a in range(500):
     sentence += str(sentences[a])
 vocab = sorted(set(sentence))
 accepted_chars = [" ", "\n"]
@@ -91,7 +92,6 @@ def text_from_ids(ids):
 
 
 chars_from_ids = preprocessing.StringLookup(vocabulary=ids_from_chars.get_vocabulary(), invert=True)
-words_in_text = 1000
 
 # Slicing up the word ids into datasets
 all_ids = ids_from_chars(chars)
@@ -103,9 +103,10 @@ ids_dataset = tf.data.Dataset.from_tensor_slices(all_ids)
 Write blurb about prediction
 """
 
-# Setting sequence length to 15 - average sentence length - 228
+# Setting sequence length to 100 - seems to work fine
 seq_length = 100
-examples_per_epoch = words_in_text//(seq_length+1)
+# Examples per epoch changes to len(sentence) - should fix weird epoch sizes
+examples_per_epoch = len(sentence)//(seq_length+1)
 
 # Converting list of words into desired sequence lengths
 sequences = ids_dataset.batch(seq_length+1, drop_remainder=True)
@@ -184,7 +185,7 @@ model = MyModel(
 loss = tf.losses.SparseCategoricalCrossentropy(from_logits=True)
 model.compile(optimizer="adam", loss=loss)
 
-history = model.fit(dataset, epochs=20, callbacks=[checkpoint_callback])
+history = model.fit(dataset, epochs=30, callbacks=[checkpoint_callback])
 
 
 # Class for making a single-step prediction AKA predicting the next character - post-training
@@ -236,13 +237,17 @@ class OneStep(tf.keras.Model):
 # Building the onestep model
 one_step_model = OneStep(model, chars_from_ids, ids_from_chars)
 
+# Mandatory saving so I dont have to run this ever again
+tf.saved_model.save(one_step_model, 'Mk_2_model')
+
 # Actually running the model
 start = time.time()
 states = None
-next_char = tf.constant(["I saw"])
+next_char = tf.constant(["This movie is a masterpiece. The best part about it is"], ["This movie is the worst I've"
+                                                                                     "ever seen. The worst part is"])
 result = [next_char]
 
-for n in range(1000):
+for n in range(2500):
     next_char, states = one_step_model.generate_one_step(next_char, states=states)
     result.append(next_char)
 
@@ -250,8 +255,5 @@ result = tf.strings.join(result)
 end = time.time()
 print(result[0].numpy().decode('utf-8'), '\n\n' + '_'*80)
 print('\nRun time:', end - start)
-with open("outputs/output.txt", "w", encoding="utf-8") as file:
+with open("outputs/Mk_2_output.txt", "w", encoding="utf-8") as file:
     file.write(str(result[0].numpy().decode("utf-8")))
-
-# Mandatory saving so I dont have to run this ever again
-tf.saved_model.save(one_step_model, 'one_step')
