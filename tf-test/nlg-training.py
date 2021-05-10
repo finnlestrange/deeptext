@@ -1,15 +1,13 @@
-# Importing tf and required libraries
-# Literally the messiest and worst import ever but who cares
+# Script for training a model on an imported dataset and saving the model from that training
+# Fix imports - WIP
 import tensorflow as tf
 # from tensorflow import keras
 from tensorflow.keras.layers.experimental import preprocessing
-from tensorflow.keras.preprocessing.text import Tokenizer
-from tensorflow.keras.preprocessing.sequence import pad_sequences
 import os
 import time
-import numpy as np
 import sys
 import string
+import numpy
 from copy import deepcopy
 
 # oh well no imports, pasting functions in here instead
@@ -44,7 +42,18 @@ def vectorize(sentences):
     return padded, word_index
 """
 
+# Directory where the dataset can be found
 locations = str(sys.argv[1])
+
+# Directory where training checkpoints can be saved
+checkpoint_dir = str(sys.argv[2])
+# Name of the checkpoint files
+checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt_{epoch}")
+
+checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
+    filepath=checkpoint_prefix,
+    save_weights_only=True)
+
 
 # Dataset imported - IMDB reviews data
 """
@@ -53,9 +62,11 @@ all_word_ids = list of all vectorized words
 words_in_text = Number of words in text
 """
 sentences = load_data(locations)
+# Convert sentences into a single string but with each line being a different review
 sentence = ""
-for thing in sentences:
-    sentence += str(thing)
+# Full dataset is 2519*5 sentences, original training will be on only 50 cuz all of them is way too much
+for a in range(50):
+    sentence += str(sentences[a])
 vocab = sorted(set(sentence))
 accepted_chars = [" ", "\n"]
 for letter in string.ascii_letters:
@@ -67,12 +78,18 @@ for punctuation in string.punctuation:
 for char in deepcopy(vocab):
     if char not in accepted_chars:
         vocab.remove(char)
+# all_word_ids, word_index = vectorize(sentences)
+vocab = sorted(set(sentence))
 chars = tf.strings.unicode_split(sentence, input_encoding="UTF-8")
 ids_from_chars = preprocessing.StringLookup(
     vocabulary=list(vocab)
 )
+
+
 def text_from_ids(ids):
-  return tf.strings.reduce_join(chars_from_ids(ids), axis=-1)
+    return tf.strings.reduce_join(chars_from_ids(ids), axis=-1)
+
+
 chars_from_ids = preprocessing.StringLookup(vocabulary=ids_from_chars.get_vocabulary(), invert=True)
 words_in_text = 1000
 
@@ -80,8 +97,6 @@ words_in_text = 1000
 all_ids = ids_from_chars(chars)
 # print(all_ids)
 ids_dataset = tf.data.Dataset.from_tensor_slices(all_ids)
-# for ids in ids_dataset.take(10):
-#    print(chars_from_ids(ids).numpy().decode("utf-8"))
 
 # Prediction
 """
@@ -115,7 +130,7 @@ Write blurb about training batches
 
 # DO NOT USE VARIABLES FOR RESPRESNTING SHUFFLE BUFFER OR BATCH SIZE - BREAKS EVERYTHING
 # Dataset batching and shuffling and prefetching
-dataset = dataset.shuffle(70000)
+dataset = dataset.shuffle(10000)
 dataset = dataset.batch(64)
 dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
 
@@ -165,14 +180,11 @@ model = MyModel(
     embedding_dim=embedding_dim,
     rnn_units=rnn_units)
 
-# Model testing ACTUALLY WORKS OH MY GOD FINALLY
-for input_example_batch, target_example_batch in dataset.take(10):
-    example_batch_predictions = model(input_example_batch)
-    sampled_indices = tf.random.categorical(example_batch_predictions[0], num_samples=1)
-    sampled_indices = tf.squeeze(sampled_indices, axis=-1).numpy()
-    print("Input:\n", text_from_ids(input_example_batch[0]).numpy())
-    print()
-    print("Next Char Predictions:\n", text_from_ids(sampled_indices).numpy())
-    print()
+# Setting loss and optimizer functions - so far it seems that each step is 5 sentences - probably dataset stuff
+loss = tf.losses.SparseCategoricalCrossentropy(from_logits=True)
+model.compile(optimizer="adam", loss=loss)
 
-# model.summary()
+history = model.fit(dataset, epochs=20, callbacks=[checkpoint_callback])
+
+# Saving done here to use in prediction algo
+tf.saved_model.save(model)
