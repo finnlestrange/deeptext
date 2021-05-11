@@ -243,8 +243,8 @@ tf.saved_model.save(one_step_model, 'Mk_2_model')
 # Actually running the model
 start = time.time()
 states = None
-next_char = tf.constant(["This movie is a masterpiece. The best part about it is"], ["This movie is the worst I've"
-                                                                                     "ever seen. The worst part is"])
+next_char = tf.constant(["This movie is a masterpiece. The best part about it is", "This movie is the worst I've "
+                                                                                   "ever seen. The worst part is"])
 result = [next_char]
 
 for n in range(2500):
