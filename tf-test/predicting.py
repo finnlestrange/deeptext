@@ -6,6 +6,7 @@ import time
 import string
 from copy import deepcopy
 
+# doesnt work for whatever reason
 # Loading variables from script arguments
 """
 data_dir = directory where the model is being kept
@@ -14,9 +15,9 @@ model_name = name of the model directory to access
 if len(sys.argv) not in [2, 3, 4]:
     sys.exit("Usage: python predicting.py [data_dir] [model_name] [text_size]")
 
-data_dir = str(sys.argv[2])
-model_name = str(sys.argv[3])
-text_size = int(sys.argv[4])
+data_dir = str(sys.argv[1])
+model_name = str(sys.argv[2])
+text_size = int(sys.argv[3])
 
 # Prompts user for a starting string to feed to the model
 starting_string = str(input("Please input a starting string for the model: "))
@@ -26,8 +27,6 @@ with open(os.path.join(model_name, "model_details.txt"), "r+") as file:
     lines = file.readlines()
     dataset_size = int(lines[2].replace("Dataset size: ", ""))
 
-print(dataset_size)
-# raise NotImplementedError
 # Majority of classes and functions defined
 """
 load_data --> Loads dataset data from specified directory
@@ -46,74 +45,6 @@ def load_data(location):
             reviews.append(f.read())
 
     return reviews
-
-
-class trainingModel(tf.keras.Model):
-    def __init__(self, vocab_size, embedding_dim, rnn_units):
-        super().__init__(self)
-        self.embedding = tf.keras.layers.Embedding(vocab_size, embedding_dim)
-        self.gru = tf.keras.layers.GRU(rnn_units,
-                                       return_sequences=True,
-                                       return_state=True)
-        self.dense = tf.keras.layers.Dense(vocab_size)
-
-    def call(self, inputs, states=None, return_state=False, training=False):
-        x = inputs
-        x = self.embedding(x, training=training)
-        if states is None:
-            states = self.gru.get_initial_state(x)
-        x, states = self.gru(x, initial_state=states, training=training)
-        x = self.dense(x, training=training)
-
-        if return_state:
-            return x, states
-        else:
-            return x
-
-
-class predictingModel(tf.keras.Model):
-    def __init__(self, model, chars_from_ids, ids_from_chars, temperature=1.0):
-        super().__init__()
-        self.temperature = temperature
-        self.model = model
-        self.chars_from_ids = chars_from_ids
-        self.ids_from_chars = ids_from_chars
-
-        # Create a mask to prevent "" or "[UNK]" from being generated.
-        skip_ids = self.ids_from_chars(['', '[UNK]'])[:, None]
-        sparse_mask = tf.SparseTensor(
-            # Put a -inf at each bad index.
-            values=[-float('inf')]*len(skip_ids),
-            indices=skip_ids,
-            # Match the shape to the vocabulary
-            dense_shape=[len(ids_from_chars.get_vocabulary())])
-        self.prediction_mask = tf.sparse.to_dense(sparse_mask)
-
-    @tf.function
-    def generate_one_step(self, inputs, states=None):
-        # Convert strings to token IDs.
-        input_chars = tf.strings.unicode_split(inputs, 'UTF-8')
-        input_ids = self.ids_from_chars(input_chars).to_tensor()
-
-        # Run the model.
-        # predicted_logits.shape is [batch, char, next_char_logits]
-        predicted_logits, states = self.model(inputs=input_ids, states=states,
-                                              return_state=True)
-        # Only use the last prediction.
-        predicted_logits = predicted_logits[:, -1, :]
-        predicted_logits = predicted_logits/self.temperature
-        # Apply the prediction mask: prevents "" or "[UNK]" from being generated.
-        predicted_logits = predicted_logits + self.prediction_mask
-
-        # Sample the output logits to generate token IDs.
-        predicted_ids = tf.random.categorical(predicted_logits, num_samples=1)
-        predicted_ids = tf.squeeze(predicted_ids, axis=-1)
-
-        # Convert from token ids to characters
-        predicted_chars = self.chars_from_ids(predicted_ids)
-
-        # Return the characters and model state.
-        return predicted_chars, states
 
 
 # Dataset importing
@@ -166,19 +97,91 @@ embedding_dim = 256
 rnn_units = 1024
 vocab_size = len(vocab)
 
+
+class MyModel(tf.keras.Model):
+    def __init__(self, vocab_size, embedding_dim, rnn_units):
+        super().__init__(self)
+        self.embedding = tf.keras.layers.Embedding(vocab_size, embedding_dim)
+        self.gru = tf.keras.layers.GRU(rnn_units,
+                                       return_sequences=True,
+                                       return_state=True)
+        self.dense = tf.keras.layers.Dense(vocab_size)
+
+    def call(self, inputs, states=None, return_state=False, training=False):
+        x = inputs
+        x = self.embedding(x, training=training)
+        if states is None:
+            states = self.gru.get_initial_state(x)
+        x, states = self.gru(x, initial_state=states, training=training)
+        x = self.dense(x, training=training)
+
+        if return_state:
+            return x, states
+        else:
+            return x
+
+
 # Building training model
-model = trainingModel(
+model = MyModel(
     vocab_size=len(ids_from_chars.get_vocabulary()),
     embedding_dim=embedding_dim,
     rnn_units=rnn_units)
 
 # Importing weights from prior training
 loss = tf.losses.SparseCategoricalCrossentropy(from_logits=True)
-model.compile(optimzer="adam", loss=loss)
-model.load_weights(os.path.join(model_name, f"{model_name}_model"))
+model.compile(optimizer="adam", loss=loss)
+location = "/home/nick/DeepText/tf-test/New_models/test_2/test_2_model"
+model.load_weights(location)
+
+
+# Predicting model class
+class OneStep(tf.keras.Model):
+    def __init__(self, model, chars_from_ids, ids_from_chars, temperature=1.0):
+        super().__init__()
+        self.temperature = temperature
+        self.model = model
+        self.chars_from_ids = chars_from_ids
+        self.ids_from_chars = ids_from_chars
+
+        # Create a mask to prevent "" or "[UNK]" from being generated.
+        skip_ids = self.ids_from_chars(['', '[UNK]'])[:, None]
+        sparse_mask = tf.SparseTensor(
+            # Put a -inf at each bad index.
+            values=[-float('inf')]*len(skip_ids),
+            indices=skip_ids,
+            # Match the shape to the vocabulary
+            dense_shape=[len(ids_from_chars.get_vocabulary())])
+        self.prediction_mask = tf.sparse.to_dense(sparse_mask)
+
+    @tf.function
+    def generate_one_step(self, inputs, states=None):
+        # Convert strings to token IDs.
+        input_chars = tf.strings.unicode_split(inputs, 'UTF-8')
+        input_ids = self.ids_from_chars(input_chars).to_tensor()
+
+        # Run the model.
+        # predicted_logits.shape is [batch, char, next_char_logits]
+        predicted_logits, states = self.model(inputs=input_ids, states=states,
+                                              return_state=True)
+        # Only use the last prediction.
+        predicted_logits = predicted_logits[:, -1, :]
+        predicted_logits = predicted_logits/self.temperature
+        # Apply the prediction mask: prevent "" or "[UNK]" from being generated.
+        predicted_logits = predicted_logits + self.prediction_mask
+
+        # Sample the output logits to generate token IDs.
+        predicted_ids = tf.random.categorical(predicted_logits, num_samples=1)
+        predicted_ids = tf.squeeze(predicted_ids, axis=-1)
+
+        # Convert from token ids to characters
+        predicted_chars = self.chars_from_ids(predicted_ids)
+
+        # Return the characters and model state.
+        return predicted_chars, states
+
 
 # Building predicting model
-predicting_model = predictingModel(model, chars_from_ids, ids_from_chars)
+one_step_model = OneStep(model, chars_from_ids, ids_from_chars)
 
 # Actual prediction
 """
@@ -188,12 +191,11 @@ text.
 """
 start = time.time()
 states = None
-next_char = tf.constant([starting_string])
-
+next_char = tf.constant(["This is a sentence"])
 result = [next_char]
 
 for n in range(text_size):
-    next_char, states = predicting_model.generate_one_step(next_char, states=states)
+    next_char, states = one_step_model.generate_one_step(next_char, states=states)
     result.append(next_char)
 
 result = tf.strings.join(result)
