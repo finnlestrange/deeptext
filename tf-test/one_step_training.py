@@ -12,13 +12,12 @@ model_name = name of the model/directory of the model
 dataset_size = number of files to be imported from dataset
 epochs = number of epochs model will train for
 """
-if len(sys.argv) not in [2, 3, 4, 5]:
-    sys.exit("Usage: python one_step_training [data_dir] [model_name] [dataset_size] [epochs]")
+if len(sys.argv) not in [2, 3, 4]:
+    sys.exit("Usage: python one_step_training [data_dir] [model_name] [epochs]")
 
 data_dir = str(sys.argv[1])
 model_name = str(sys.argv[2])
-dataset_size = int(sys.argv[3])
-epochs = int(sys.argv[4])
+epochs = int(sys.argv[3])
 
 # Majority of classes and functions defined
 """
@@ -96,8 +95,8 @@ prefetched.
 # Data loading
 reviews = load_data(data_dir)
 reviews_string = ""
-for n in range(dataset_size):
-    reviews_string += (str(reviews[n]) + "\n")
+for a in reviews:
+    reviews_string += str(a + "\n")
 vocab = sorted(set(reviews_string))
 
 # Data formatting - ensuring no invalid (AKA endian) chars are found in dataset
@@ -167,6 +166,6 @@ model.save_weights(os.path.join(model_name, f"{model_name}_model"))
 with open(os.path.join(model_name, "model_details.txt"), "w", encoding="UTF-8") as file:
     file.write("Model details-\n")
     file.write(f"Model name: {model_name}\n")
-    file.write(f"Dataset size: {dataset_size}\n")
+    file.write(f"Dataset size: Full\n")
     file.write(f"Epochs: {epochs}\n")
     file.write(f"Training type: One step\n")
