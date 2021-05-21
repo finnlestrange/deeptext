@@ -7,8 +7,7 @@ import string
 from copy import deepcopy
 
 locations = str(sys.argv[2])
-dataset_size = int(sys.argv[3])
-output_name = str(sys.argv[4])
+output_name = str(sys.argv[3])
 
 # Import dataset lol
 def load_data(location):
@@ -187,10 +186,10 @@ one_step_model = OneStep(model, chars_from_ids, ids_from_chars)
 # Actually running the model
 start = time.time()
 states = None
-next_char = tf.constant(["This movie is a masterpiece. The best part about it is"])
+next_char = tf.constant(["Once upon a time "])
 result = [next_char]
 
-for n in range(1000):
+for n in range(50000):
     next_char, states = one_step_model.generate_one_step(next_char, states=states)
     result.append(next_char)
 
