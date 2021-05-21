@@ -16,7 +16,7 @@
 
 * `one_step_training.py` - Outputs a Keras model that is used for prediction by `predicting.py`
 * `predicting-working.py` - Loads data and model output and predicts output text based on input data, the input model starting sentences 
-* `predicting.py` - The old WIP prediction script that currently needs to be refactored
+* `predicting.py` - The new WIP prediction script that currently needs to be refactored
 
 ## 📅 RoadMap 
 
