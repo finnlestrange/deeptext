@@ -1,5 +1,0 @@
-Model details-
-Model name: full_test
-Dataset size: Full
-Epochs: 10
-Training type: One step
