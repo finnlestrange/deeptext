@@ -1,0 +1,5 @@
+Model details-
+Model name: custom_train_test
+Dataset size: Full
+Epochs: 15
+Training type: One step

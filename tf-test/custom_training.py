@@ -13,7 +13,7 @@ dataset_size = number of files to be imported from dataset
 epochs = number of epochs model will train for
 """
 if len(sys.argv) not in [2, 3, 4]:
-    sys.exit("Usage: python one_step_training [data_dir] [model_name] [epochs]")
+    sys.exit("Usage: python custom_training [data_dir] [model_name] [epochs]")
 
 data_dir = str(sys.argv[1])
 model_name = str(sys.argv[2])
