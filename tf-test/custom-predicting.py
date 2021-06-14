@@ -199,10 +199,10 @@ one_step_model = OneStep(model, chars_from_ids, ids_from_chars)
 # Actually running the model
 start = time.time()
 states = None
-next_char = tf.constant(["Once upon a time "])
+next_char = tf.constant(["Climate change is "]*20)
 result = [next_char]
 
-for n in range(50000):
+for n in range(5000):
     next_char, states = one_step_model.generate_one_step(next_char, states=states)
     result.append(next_char)
 
